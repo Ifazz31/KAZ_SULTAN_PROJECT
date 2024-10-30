@@ -1,0 +1,1 @@
+Run app with - fastapi dev main.py
