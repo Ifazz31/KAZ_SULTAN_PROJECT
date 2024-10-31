@@ -1,25 +1,32 @@
 import React, { useState } from 'react';
+import './App.css';
 
 const ImageGenerationForm: React.FC = () => {
-  const [positivePrompt, setPositivePrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
-  const [samplerSeed, setSamplerSeed] = useState<number | undefined>();
-  const [samplerSteps, setSamplerSteps] = useState<number>(4); 
+  const [positivePrompt, setPositivePrompt] = useState<string>('');
+  const [negativePrompt, setNegativePrompt] = useState<string>('');
+  const [samplerSeed, setSamplerSeed] = useState<number | null>(null);
+  const [samplerSteps, setSamplerSteps] = useState<number>(4);
+  const [samplerCfg, setSamplerCfg] = useState<number>(7.5); 
   const [outputImage, setOutputImage] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string>('512x512'); 
+  const [selectedSize, setSelectedSize] = useState<string>('512x512');
+  const [selectedScheduler, setSelectedScheduler] = useState<string>('normal');
 
   const sizes = ['256x256', '512x512', '1024x1024'];
+  const schedulers = ['normal', 'karras', 'exponential', 'sgm_uniform', 'simple', 'beta'];
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const requestData = {
       positive_prompt: positivePrompt,
       negative_prompt: negativePrompt,
       sampler_seed: samplerSeed,
       sampler_steps: samplerSteps,
-      empty_latent_size: selectedSize, 
+      sampler_cfg: samplerCfg,
+      empty_latent_size: selectedSize,
+      sampler_scheduler: selectedScheduler,
     };
-    
+
     const response = await fetch('http://localhost:8000/trigger-workflow/', {
       method: 'POST',
       headers: {
@@ -30,74 +37,86 @@ const ImageGenerationForm: React.FC = () => {
 
     if (response.ok) {
       const data = await response.json();
-      setOutputImage(data.generated_image_url); 
+      setOutputImage(data.generated_image_url);
     } else {
-      console.error('Failed to generate image');
+      console.error('Failed to generate image, Status:', response.status);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 font-sans">
-      <h1 className="text-center text-3xl mb-6">Sultan Image Generator</h1>
-      <div className="flex gap-6">
-        {/* Input Section */}
-        <form className="w-1/2 p-6 border border-gray-300 rounded-lg bg-gray-50" onSubmit={handleGenerate}>
-          <h2 className="text-xl text-gray-800 mb-4">Input</h2>
+    <div className="container flex flex-col items-center h-screen w-full bg-white">
+      <h1 className="text-center text-2xl font-bold mb-5">Sultan Image Generator</h1>
+      <div className="grid gap-4 lg:grid-cols-2 w-full max-w-full flex-grow">
+        <form className="bg-gray-100 p-5 rounded-lg shadow-md flex-grow" onSubmit={handleGenerate}>
+          <h2 className="text-xl font-semibold mb-4">Input</h2>
 
           <label className="block mb-4">
-            <span className="text-gray-700">Prompt</span>
+            <span className="text-sm font-medium text-gray-700">Prompt</span>
             <input
               type="text"
               value={positivePrompt}
               onChange={(e) => setPositivePrompt(e.target.value)}
               placeholder="e.g., an astronaut on a horse in space"
               required
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full mt-1 p-2 border rounded"
             />
           </label>
 
           <label className="block mb-4">
-            <span className="text-gray-700">Negative Prompt</span>
+            <span className="text-sm font-medium text-gray-700">Negative Prompt</span>
             <input
               type="text"
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
               placeholder="e.g., blurry, low resolution"
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full mt-1 p-2 border rounded"
             />
-            <small className="text-gray-600">Specify things to avoid in the output image</small>
+            <small className="text-gray-500">Specify things to avoid in the output image</small>
           </label>
 
           <label className="block mb-4">
-            <span className="text-gray-700">Seed</span>
+            <span className="text-sm font-medium text-gray-700">Seed</span>
             <input
               type="number"
-              value={samplerSeed || ''}
-              onChange={(e) => setSamplerSeed(e.target.value ? Number(e.target.value) : undefined)}
+              value={samplerSeed ?? ''} 
+              onChange={(e) => setSamplerSeed(e.target.value ? Number(e.target.value) : null)}
               placeholder="Randomizes output when blank"
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full mt-1 p-2 border rounded"
             />
           </label>
 
           <label className="block mb-4">
-            <span className="text-gray-700">Steps</span>
+            <span className="text-sm font-medium text-gray-700">Steps</span>
             <input
               type="number"
               value={samplerSteps}
               onChange={(e) => setSamplerSteps(Number(e.target.value))}
               min="1"
               max="50"
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full mt-1 p-2 border rounded"
             />
-            <small className="text-gray-600">Controls the level of detail in the output</small>
+            <small className="text-gray-500">Controls the level of detail in the output</small>
           </label>
 
           <label className="block mb-4">
-            <span className="text-gray-700">Size</span>
+            <span className="text-sm font-medium text-gray-700">CFG (Guidance Scale)</span>
+            <input
+              type="number"
+              value={samplerCfg}
+              onChange={(e) => setSamplerCfg(Number(e.target.value))}
+              min="1"
+              max="20"
+              className="w-full mt-1 p-2 border rounded"
+            />
+            <small className="text-gray-500">Adjusts the influence of the prompt on the output</small>
+          </label>
+
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700">Size</span>
             <select
               value={selectedSize}
               onChange={(e) => setSelectedSize(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
+              className="w-full mt-1 p-2 border rounded"
             >
               {sizes.map((size) => (
                 <option key={size} value={size}>
@@ -107,20 +126,41 @@ const ImageGenerationForm: React.FC = () => {
             </select>
           </label>
 
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">Generate Image</button>
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700">Scheduler</span>
+            <select
+              value={selectedScheduler}
+              onChange={(e) => setSelectedScheduler(e.target.value)}
+              className="w-full mt-1 p-2 border rounded"
+            >
+              {schedulers.map((scheduler) => (
+                <option key={scheduler} value={scheduler}>
+                  {scheduler}
+                </option>
+              ))}
+            </select>
+          </label>
         </form>
 
-        {/* Output Section */}
-        <div className="w-1/2 p-6 border border-gray-300 rounded-lg bg-gray-50">
-          <h2 className="text-xl text-gray-800 mb-4">Output</h2>
+        <div className="bg-gray-100 p-5 rounded-lg shadow-md flex-grow relative">
+          <button
+            onClick={handleGenerate}
+            className="absolute top-4 right-8 w-20 h-12 bg-blue-500 text-black rounded-md flex items-center justify-center text-lg font-bold hover:bg-blue-600"
+          >
+            Generate
+          </button>
+
+          <h2 className="text-xl font-semibold mt-32 mb-4">Output</h2>
+
           {outputImage ? (
-            <img src={outputImage} alt="Generated Output" className="w-full rounded-lg mt-4" />
+            <img src={outputImage} alt="Generated Output" className="w-full rounded-md mt-4" />
           ) : (
-            <p>No image generated yet.</p>
+            <p className="text-gray-500">No image generated yet.</p>
           )}
-          <div className="flex justify-around mt-4">
-            <button disabled={!outputImage} className="bg-gray-300 text-gray-600 px-4 py-2 rounded cursor-not-allowed">Share</button>
-            <button disabled={!outputImage} className="bg-gray-300 text-gray-600 px-4 py-2 rounded cursor-not-allowed">Download</button>
+
+          <div className="output-actions flex justify-around mt-4">
+            <button className="p-2 bg-gray-300 rounded-md" disabled={!outputImage}>Share</button>
+            <button className="p-2 bg-gray-300 rounded-md" disabled={!outputImage}>Download</button>
           </div>
         </div>
       </div>

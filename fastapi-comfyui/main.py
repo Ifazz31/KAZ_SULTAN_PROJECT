@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -20,7 +19,6 @@ app.add_middleware(
 comfyui_server_address = "127.0.0.1:8188"
 client_id = str(uuid.uuid4())
 
-# Define the request parameters model
 class RequestParams(BaseModel):
     positive_prompt: str
     negative_prompt: str
@@ -28,6 +26,8 @@ class RequestParams(BaseModel):
     sampler_steps: int
     sampler_cfg: float
     empty_latent_size: str
+    sampler_scheduler: str
+    
 
 @app.post("/trigger-workflow/")
 async def trigger_workflow(request_params: RequestParams):
@@ -38,18 +38,18 @@ async def trigger_workflow(request_params: RequestParams):
         sampler_steps = request_params.sampler_steps
         sampler_cfg = request_params.sampler_cfg
         empty_latent_size = request_params.empty_latent_size
+        sampler_scheduler = request_params.sampler_scheduler
         width, height = map(int, empty_latent_size.split('x'))
 
-        # Construct the ComfyUI prompt with required parameters
         prompt = {
-            "prompt": {  # Outer key as per ComfyUI's expected structure
+            "prompt": {  
                 "3": {
                     "inputs": {
                         "seed": sampler_seed,
                         "steps": sampler_steps,
                         "cfg": sampler_cfg,
                         "sampler_name": "euler",
-                        "scheduler": "normal",
+                        "scheduler": sampler_scheduler,
                         "denoise": 1,
                         "model": ["4", 0],
                         "positive": ["6", 0],
@@ -102,11 +102,10 @@ async def trigger_workflow(request_params: RequestParams):
                     "_meta": {"title": "Save Image"},
                 },
             },
-            "client_id": client_id,  # Include client_id outside the prompt dictionary
-            "last_node": "9"  # Specify the last node if required by ComfyUI
+            "client_id": client_id,  
+            "last_node": "9"  
         }
 
-        # Send request to ComfyUI server
         data = json.dumps(prompt).encode("utf-8")
         req = urllib.request.Request(
             f"http://{comfyui_server_address}/prompt", data=data, method="POST",
