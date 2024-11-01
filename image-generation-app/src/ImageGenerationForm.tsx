@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 const ImageGenerationForm: React.FC = () => {
@@ -10,6 +10,7 @@ const ImageGenerationForm: React.FC = () => {
   const [outputImage, setOutputImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>('512x512');
   const [selectedScheduler, setSelectedScheduler] = useState<string>('normal');
+  const [progress, setProgress] = useState<number>(0); 
 
   const sizes = ['256x256', '512x512', '1024x1024'];
   const schedulers = ['normal', 'karras', 'exponential', 'sgm_uniform', 'simple', 'beta'];
@@ -42,6 +43,25 @@ const ImageGenerationForm: React.FC = () => {
       console.error('Failed to generate image, Status:', response.status);
     }
   };
+
+  const connectWebSocket = () => {
+    const socket = new WebSocket('ws://localhost:8188'); 
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'progress') {
+        setProgress(message.data.progress); 
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+  };
+
+  useEffect(() => {
+    connectWebSocket(); 
+  }, []);
 
   return (
     <div className="container flex flex-col items-center h-screen w-full bg-white">
@@ -162,6 +182,16 @@ const ImageGenerationForm: React.FC = () => {
             <button className="p-2 bg-gray-300 rounded-md" disabled={!outputImage}>Share</button>
             <button className="p-2 bg-gray-300 rounded-md" disabled={!outputImage}>Download</button>
           </div>
+          
+          <div className="w-full bg-gray-200 rounded-full h-6 mt-10">
+            <div
+              className="bg-blue-500 h-full rounded-full"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          {progress > 0 && (
+            <p className="text-center text-sm mt-2">{`Progress: ${progress}%`}</p>
+          )}
         </div>
       </div>
     </div>

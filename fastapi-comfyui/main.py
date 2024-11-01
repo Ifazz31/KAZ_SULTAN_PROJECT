@@ -3,8 +3,8 @@ import json
 import urllib.request
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -27,7 +27,6 @@ class RequestParams(BaseModel):
     sampler_cfg: float
     empty_latent_size: str
     sampler_scheduler: str
-    
 
 @app.post("/trigger-workflow/")
 async def trigger_workflow(request_params: RequestParams):
@@ -42,7 +41,7 @@ async def trigger_workflow(request_params: RequestParams):
         width, height = map(int, empty_latent_size.split('x'))
 
         prompt = {
-            "prompt": {  
+            "prompt": {
                 "3": {
                     "inputs": {
                         "seed": sampler_seed,
@@ -61,15 +60,15 @@ async def trigger_workflow(request_params: RequestParams):
                 },
                 "4": {
                     "inputs": {
-                        "ckpt_name": "wildcardxXLANIMATION_wildcardxXLANIMATION.safetensors"
+                        "ckpt_name": "prefectPonyXL_v3.safetensors"
                     },
                     "class_type": "CheckpointLoaderSimple",
                     "_meta": {"title": "Load Checkpoint"},
                 },
                 "5": {
                     "inputs": {
-                        "width": width,  
-                        "height": height,  
+                        "width": width,
+                        "height": height,
                         "batch_size": 1
                     },
                     "class_type": "EmptyLatentImage",
@@ -102,8 +101,8 @@ async def trigger_workflow(request_params: RequestParams):
                     "_meta": {"title": "Save Image"},
                 },
             },
-            "client_id": client_id,  
-            "last_node": "9"  
+            "client_id": client_id,
+            "last_node": "9"
         }
 
         data = json.dumps(prompt).encode("utf-8")
@@ -115,8 +114,16 @@ async def trigger_workflow(request_params: RequestParams):
         with urllib.request.urlopen(req) as response:
             result = response.read().decode("utf-8")
             result_json = json.loads(result)
-            print("ComfyUI response:", result_json)
-            return JSONResponse(content={"message": "Workflow triggered successfully", "result": result_json})
+            
+            print("ComfyUI response:", json.dumps(result_json, indent=2))
+
+            
+            image_url = result_json.get("image_url")  
+
+            return JSONResponse(content={
+                "message": "Workflow triggered successfully",
+                "image_url": image_url,  
+            })
 
     except Exception as e:
         print("Error triggering workflow:", str(e))
