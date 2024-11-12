@@ -19,6 +19,7 @@ app.add_middleware(
 comfyui_server_address = "127.0.0.1:8188"
 client_id = str(uuid.uuid4())
 
+
 class RequestParams(BaseModel):
     positive_prompt: str
     negative_prompt: str
@@ -27,6 +28,7 @@ class RequestParams(BaseModel):
     sampler_cfg: float
     empty_latent_size: str
     sampler_scheduler: str
+
 
 @app.post("/trigger-workflow/")
 async def trigger_workflow(request_params: RequestParams):
@@ -38,7 +40,7 @@ async def trigger_workflow(request_params: RequestParams):
         sampler_cfg = request_params.sampler_cfg
         empty_latent_size = request_params.empty_latent_size
         sampler_scheduler = request_params.sampler_scheduler
-        width, height = map(int, empty_latent_size.split('x'))
+        width, height = map(int, empty_latent_size.split("x"))
 
         prompt = {
             "prompt": {
@@ -59,18 +61,12 @@ async def trigger_workflow(request_params: RequestParams):
                     "_meta": {"title": "KSampler"},
                 },
                 "4": {
-                    "inputs": {
-                        "ckpt_name": "prefectPonyXL_v3.safetensors"
-                    },
+                    "inputs": {"ckpt_name": "prefectPonyXL_v3.safetensors"},
                     "class_type": "CheckpointLoaderSimple",
                     "_meta": {"title": "Load Checkpoint"},
                 },
                 "5": {
-                    "inputs": {
-                        "width": width,
-                        "height": height,
-                        "batch_size": 1
-                    },
+                    "inputs": {"width": width, "height": height, "batch_size": 1},
                     "class_type": "EmptyLatentImage",
                     "_meta": {"title": "Empty Latent Image"},
                 },
@@ -102,28 +98,32 @@ async def trigger_workflow(request_params: RequestParams):
                 },
             },
             "client_id": client_id,
-            "last_node": "9"
+            "last_node": "9",
         }
 
         data = json.dumps(prompt).encode("utf-8")
         req = urllib.request.Request(
-            f"http://{comfyui_server_address}/prompt", data=data, method="POST",
-            headers={"Content-Type": "application/json"}
+            f"http://{comfyui_server_address}/prompt",
+            data=data,
+            method="POST",
+            headers={"Content-Type": "application/json"},
         )
 
         with urllib.request.urlopen(req) as response:
             result = response.read().decode("utf-8")
             result_json = json.loads(result)
-            
+
             print("ComfyUI response:", json.dumps(result_json, indent=2))
 
-            
-            image_url = result_json.get("image_url")  
+            image_url = result_json.get("image_url")
 
-            return JSONResponse(content={
-                "message": "Workflow triggered successfully",
-                "image_url": image_url,  
-            })
+            return JSONResponse(
+                content={
+                    "message": "Workflow triggered successfully",
+                    "image_url": image_url,
+                    "client_id": client_id,
+                }
+            )
 
     except Exception as e:
         print("Error triggering workflow:", str(e))
