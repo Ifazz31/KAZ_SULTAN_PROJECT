@@ -95,7 +95,7 @@ const ImageGenerationForm: React.FC = () => {
   };
 
   return (
-    <div className="container flex flex-col items-center h-screen w-full bg-gray-50 p-7">
+    <div className="container mx-auto flex flex-col items-center h-screen w-full bg-gray-50 p-7">
       <h1 className="text-center text-4xl font-bold mb-8">
         Sultan Image Generator
       </h1>
@@ -213,7 +213,7 @@ const ImageGenerationForm: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md flex-grow relative">
           <button
             onClick={handleGenerate}
-            className="absolute top-4 right-8 w42 h-16 bg-blue-500 text-white rounded-md flex items-center justify-center text-lg font-semibold shadow-md hover:bg-blue-600"
+            className="absolute top-4 right-8 w-36 h-12 bg-blue-600 text-white rounded-md flex items-center justify-center text-lg font-semibold shadow-md hover:bg-blue-800"
           >
             Generate
           </button>
