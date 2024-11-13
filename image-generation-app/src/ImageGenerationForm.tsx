@@ -67,21 +67,24 @@ const ImageGenerationForm: React.FC = () => {
     };
 
     socket.onmessage = (event) => {
-      console.log("data", event.data);
-
       try {
         const message = JSON.parse(event.data);
-        console.log("WebSocket message:", message);
-
-        if (
-          message.type === "progress" &&
-          message.data &&
-          typeof message.data.progress === "number"
-        ) {
-          setProgress(message.data.progress);
+    
+        if (message.type === "status") {
+          console.log("Status update:", message.data.status);
+    
+        } else if (message.type === "executing") {
+          console.log("Currently executing node:", message.data.node);
+    
+        } else if (message.type === "progress") {
+          if (message.data && message.data.progress) {
+            setProgress(message.data.progress); 
+          }
+        } else {
+          console.warn("Unknown message type:", message.type);
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        console.error("Failed to parse WebSocket message:", error);
       }
     };
 
