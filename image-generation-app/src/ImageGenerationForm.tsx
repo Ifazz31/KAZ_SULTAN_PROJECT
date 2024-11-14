@@ -97,7 +97,7 @@ const ImageGenerationForm: React.FC = () => {
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-
+        console.log("msg:", message);
         if (message.type === "status") {
           console.log("Status update:", message.data.status);
         } else if (message.type === "executing") {
