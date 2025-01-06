@@ -1,10 +1,23 @@
+import os
 import uuid
 import json
 import urllib.request
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = "http://127.0.0.1:8000/auth/google/callback"
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
 
 app = FastAPI()
 
@@ -130,3 +143,51 @@ async def trigger_workflow(request_params: RequestParams):
         return JSONResponse(
             status_code=500, content={"message": f"Error triggering workflow: {str(e)}"}
         )
+
+@app.get("/auth/google")
+def google_login():
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    url = f"{GOOGLE_AUTH_URL}?{httpx.QueryParams(params)}"
+    return RedirectResponse(url)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(code: str):
+    try:
+        token_data = {
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(GOOGLE_TOKEN_URL, data=token_data)
+            token_response.raise_for_status()
+            tokens = token_response.json()
+
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+        async with httpx.AsyncClient() as client:
+            userinfo_response = await client.get(GOOGLE_USERINFO_URL, headers=headers)
+            userinfo_response.raise_for_status()
+            userinfo = userinfo_response.json()
+
+        return JSONResponse(
+            content={
+                "message": "Login successful",
+                "user": { 
+                    "email": userinfo["email"],
+                    "name": userinfo.get("name"),
+                    "picture": userinfo.get("picture"),
+                },
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google authentication failed: {str(e)}")
