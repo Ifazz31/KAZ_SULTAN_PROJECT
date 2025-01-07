@@ -8,8 +8,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 from dotenv import load_dotenv
+from pymongo import MongoClient
 
 load_dotenv()
+
+#MongoDB connection
+
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
+
+#Acessing the database
+db = client["comfy-users"]
+users_collection = db["test-users"]
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -179,14 +189,22 @@ async def google_callback(code: str):
             userinfo_response.raise_for_status()
             userinfo = userinfo_response.json()
 
+        user_data = {
+            "email": userinfo["email"],
+            "name": userinfo.get("name"),
+            "picture": userinfo.get("picture"),
+        }
+
+# Update the user document if it exists, otherwise insert a new document
+        users_collection.update_one(
+            {"email":user_data["email"]}, # Filter to find the user by email
+            {"$set": user_data},          # Update the user data
+            upsert=True,                  # Insert a new document if the user does not exist
+        )
         return JSONResponse(
             content={
                 "message": "Login successful",
-                "user": { 
-                    "email": userinfo["email"],
-                    "name": userinfo.get("name"),
-                    "picture": userinfo.get("picture"),
-                },
+                "user": user_data,
             }
         )
     except Exception as e:
